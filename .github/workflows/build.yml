@@ -1,0 +1,122 @@
+name: build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: jsirianni/opentelemetry-collector-contrib-container-builds
+
+jobs:
+  build-release:
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        go_version:
+          - 1.17
+        contrib_version:
+          - "0.45.1"
+          - "0.45.0"
+          - "0.44.0"
+          - "0.43.0"
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Checkout Contrib ${{ matrix.contrib_version }}
+      uses: actions/checkout@v2
+      with:
+        repository: open-telemetry/opentelemetry-collector-contrib
+        path: opentelemetry-collector-contrib
+        ref: "v${{ matrix.contrib_version }}"
+
+    - name: Set up Go ${{ matrix.go_version }}
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go_version }}
+
+    - name: Cache Go
+      id: go-cache
+      uses: actions/cache@v2
+      env:
+        cache-name: cache-go-modules
+      with:
+        path: |
+          /home/runner/go/pkg/mod
+          /home/runner/.cache/go-build
+          /home/runner/go/bin
+        key: v1-go-pkg-mod-${{ runner.os }}-${{ matrix.go_Version }}-v${{ matrix.contrib_version }}-${{ hashFiles('**/go.mod', '**/go.sum') }}
+
+    - name: Go Mod Download
+      run: go mod download
+      working-directory: opentelemetry-collector-contrib
+
+    - name: Build Collector
+      run: make otelcontribcol
+      working-directory: opentelemetry-collector-contrib
+
+    # Workaround: https://github.com/docker/build-push-action/issues/461
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+
+    # Login against a Docker registry except on PR
+    # https://github.com/docker/login-action
+    - name: Log Into Container Registry
+      uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    # Extract metadata (tags, labels) for Docker
+    # https://github.com/docker/metadata-action
+    - name: Extract Docker Metadata
+      id: meta
+      uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+    - name: Build Container Image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./Dockerfile
+        #platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64
+        push: true
+        labels: ${{ steps.meta.outputs.labels }}
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.contrib_version }}-${{ matrix.go_version }}-dev
+
+    - name: Run Container with Test Config
+      run: |
+        docker run -d \
+          --name otel \
+          -v ${PWD}/test/config.yaml:/config.yaml \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.contrib_version }}-${{ matrix.go_version }}-dev --config /config.yaml
+
+    - name: Install Cinc
+      run: |
+        curl -L https://omnitruck.cinc.sh/install.sh | \
+        sudo bash -s -- -P cinc-auditor -v 4
+
+    - name: Run Inspec Tests
+      run: cinc-auditor exec test/cinc.rb -t "docker://otel"
+    
+    - name: Release
+      if: ${{ github.event_name != 'pull_request' }}
+      run: |
+        docker tag \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.contrib_version }}-${{ matrix.go_version }}-dev \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.contrib_version }}-${{ matrix.go_version }}
+        
+        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.contrib_version }}-${{ matrix.go_version }}

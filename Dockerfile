@@ -1,17 +1,15 @@
-ARG go_version
-ARG contrib_version
+FROM alpine:3.15
 
-FROM golang:${go_version} as build
+ENV USER=otel
+ENV UID=10001
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --no-create-home \
+    --uid "$UID" \
+    "$USER"
 
-RUN \
-    sudo apt-get -qq update && \
-    sudo apt-get install -qq -y git build-essential
 
-WORKDIR /opentelemetry-collector-contrib
-RUN git clone \
-        --branch ${contrib_version} \
-        https://github.com/open-telemetry/opentelemetry-collector-contrib.git .
+COPY --chown=otel --chmod=0700 opentelemetry-collector-contrib/bin/otelcontribcol_linux_amd64 /otelcontribcol
 
-RUN \
-    go mod download && \
-    make otelcontribcol
+ENTRYPOINT [ "/otelcontribcol" ]
