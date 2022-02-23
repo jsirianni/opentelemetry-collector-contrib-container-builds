@@ -13,91 +13,8 @@ env:
   IMAGE_NAME: jsirianni/opentelemetry-collector-contrib-container-builds
 
 jobs:
-  build:
+  build-release:
     runs-on: ubuntu-20.04
-    if: github.event_name == 'pull_request'
-    strategy:
-      fail-fast: false
-      matrix:
-        go_version:
-          - 1.17
-        contrib_version:
-          - "v0.45.1"
-          - "v0.45.0"
-          - "v0.44.0"
-          - "v0.43.0"
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Checkout Contrib ${{ matrix.contrib_version }}
-      uses: actions/checkout@v2
-      with:
-        repository: open-telemetry/opentelemetry-collector-contrib
-        path: opentelemetry-collector-contrib
-        ref: ${{ matrix.contrib_version }}
-
-    - name: Set up Go ${{ matrix.go_version }}
-      uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.go_version }}
-
-    - name: Cache Go
-      id: go-cache
-      uses: actions/cache@v2
-      env:
-        cache-name: cache-go-modules
-      with:
-        path: |
-          /home/runner/go/pkg/mod
-          /home/runner/.cache/go-build
-          /home/runner/go/bin
-        key: v1-go-pkg-mod-${{ runner.os }}-${{ matrix.go_Version }}-${{ matrix.contrib_version }}-${{ hashFiles('**/go.mod', '**/go.sum') }}
-
-    - name: Go Mod Download
-      run: go mod download
-      working-directory: opentelemetry-collector-contrib
-
-    - name: Build Collector
-      run: make otelcontribcol
-      working-directory: opentelemetry-collector-contrib
-
-    # Workaround: https://github.com/docker/build-push-action/issues/461
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
-
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v1
-
-    - name: Build Container Image
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: ./Dockerfile
-        #platforms: linux/amd64,linux/arm64
-        platforms: linux/amd64
-        push: false
-        tags: 
-          contrib:${{ matrix.contrib_version }}-go${{ matrix.go_version }}
-
-    - name: Run Container with Test Config
-      run: |
-        docker run \
-          --name otel \
-          -v ${PWD}/test/config.yaml:/config.yaml \
-         contrib:${{ matrix.contrib_version }}-go${{ matrix.go_version }} --config /config.yaml
-
-    - name: Install Cinc
-      run: |
-        curl -L https://omnitruck.cinc.sh/install.sh | \
-        sudo bash -s -- -P cinc-auditor -v 4
-
-    - name: Run Inspec Tests
-      run: cinc-auditor exec test/cinc.rb -t "docker://otel"
-
-  release:
-    runs-on: ubuntu-20.04
-    if: github.event_name != 'pull_request'
     permissions:
       contents: read
       packages: write
@@ -201,6 +118,7 @@ jobs:
     # transparency data even for private images, pass --force to cosign below.
     # https://github.com/sigstore/cosign
     - name: Sign the published Docker image
+      if: ${{ github.event_name != 'pull_request' }}
       env:
         COSIGN_EXPERIMENTAL: "true"
       # This step uses the identity token to provision an ephemeral certificate
