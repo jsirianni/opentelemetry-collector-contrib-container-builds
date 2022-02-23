@@ -14,5 +14,5 @@ end
 
 describe port(8888) do
     it { should be_listening }
-    its('processes') {should include 'otel'}
+    its('processes') {should include 'otelcontribcol'}
 end
