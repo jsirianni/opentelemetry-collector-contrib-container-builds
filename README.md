@@ -9,6 +9,7 @@ local development, not intended for producton.
 
 Tags use the following naming conention: `<otel contrib version>-<go version>`.
 
+- Contrib latest with Go 1.17: `ghcr.io/jsirianni/opentelemetry-collector-contrib-container-builds:main-1.17`
 - Contrib 0.45.1 with Go 1.17: `ghcr.io/jsirianni/opentelemetry-collector-contrib-container-builds:0.45.1-1.17`
 - Contrib 0.45.0 with Go 1.17: `ghcr.io/jsirianni/opentelemetry-collector-contrib-container-builds:0.45.0-1.17`
 - Contrib 0.44.0 with Go 1.17: `ghcr.io/jsirianni/opentelemetry-collector-contrib-container-builds:0.44.0-1.17`
