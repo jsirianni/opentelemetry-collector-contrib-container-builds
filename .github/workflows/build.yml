@@ -111,3 +111,12 @@ jobs:
 
     - name: Run Inspec Tests
       run: cinc-auditor exec test/cinc.rb -t "docker://otel"
+    
+    - name: Release
+      if: ${{ github.event_name != 'pull_request' }}
+      run: |
+        docker tag \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.contrib_version }}-${{ matrix.go_version }}-dev \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.contrib_version }}-${{ matrix.go_version }}
+        
+        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.contrib_version }}-${{ matrix.go_version }}
