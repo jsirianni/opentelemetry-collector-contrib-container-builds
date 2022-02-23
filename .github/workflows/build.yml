@@ -99,7 +99,7 @@ jobs:
 
     - name: Run Container with Test Config
       run: |
-        docker run \
+        docker run -d \
           --name otel \
           -v ${PWD}/test/config.yaml:/config.yaml \
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.contrib_version }}-${{ matrix.go_version }}-dev --config /config.yaml
