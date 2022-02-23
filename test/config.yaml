@@ -1,0 +1,26 @@
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: "otel-collector"
+          scrape_interval: 5s
+          static_configs:
+            - targets: ["localhost:8888"]
+
+processors:
+  batch:
+    send_batch_max_size: 250
+    send_batch_size: 250
+
+exporters:
+  logging:
+
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - prometheus
+      processors:
+        - batch
+      exporters:
+        - logging
