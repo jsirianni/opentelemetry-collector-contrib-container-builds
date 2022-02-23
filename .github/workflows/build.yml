@@ -7,9 +7,7 @@ on:
       - main
 
 env:
-  # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
-  # github.repository as <account>/<repo>
   IMAGE_NAME: jsirianni/opentelemetry-collector-contrib-container-builds
 
 jobs:
@@ -18,9 +16,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      # This is used to complete the identity challenge
-      # with sigstore/fulcio when running outside of PRs.
-      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -101,14 +96,14 @@ jobs:
         platforms: linux/amd64
         push: true
         labels: ${{ steps.meta.outputs.labels }}
-        tags: jsirianni/opentelemetry-collector-contrib-container-builds:${{ matrix.contrib_version }}-${{ matrix.go_version }}-dev
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.contrib_version }}-${{ matrix.go_version }}-dev
 
     - name: Run Container with Test Config
       run: |
         docker run \
           --name otel \
           -v ${PWD}/test/config.yaml:/config.yaml \
-          ghcr.io/jsirianni/opentelemetry-collector-contrib-container-builds:${{ matrix.contrib_version }}-${{ matrix.go_version }}-dev --config /config.yaml
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.contrib_version }}-${{ matrix.go_version }}-dev --config /config.yaml
 
     - name: Install Cinc
       run: |
