@@ -42,14 +42,6 @@ jobs:
         path: opentelemetry-collector-contrib
         ref: "v${{ matrix.contrib_version }}"
 
-    # Install the cosign tool except on PR
-    # https://github.com/sigstore/cosign-installer
-    - name: Install cosign
-      if: github.event_name != 'pull_request'
-      uses: sigstore/cosign-installer@1e95c1de343b5b0c23352d6417ee3e48d5bcd422
-      with:
-        cosign-release: 'v1.4.0'
-
     - name: Set up Go ${{ matrix.go_version }}
       uses: actions/setup-go@v2
       with:
@@ -84,7 +76,7 @@ jobs:
 
     # Login against a Docker registry except on PR
     # https://github.com/docker/login-action
-    - name: Log into registry ${{ env.REGISTRY }}
+    - name: Log Into Container Registry
       if: github.event_name != 'pull_request'
       uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
       with:
@@ -94,7 +86,7 @@ jobs:
 
     # Extract metadata (tags, labels) for Docker
     # https://github.com/docker/metadata-action
-    - name: Extract Docker metadata
+    - name: Extract Docker Metadata
       id: meta
       uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
       with:
@@ -107,33 +99,16 @@ jobs:
         file: ./Dockerfile
         #platforms: linux/amd64,linux/arm64
         platforms: linux/amd64
-        push: ${{ github.event_name != 'pull_request' }}
-        # load when  pull request because the image will not be pushed, causing
-        # the run step to fail because the image does not exist.
-        load: ${{ github.event_name == 'pull_request' }}
+        push: true
         labels: ${{ steps.meta.outputs.labels }}
-        tags: 
-          jsirianni/opentelemetry-collector-contrib-container-builds:${{ matrix.contrib_version }}-${{ matrix.go_version }}
-
-    # Sign the resulting Docker image digest except on PRs.
-    # This will only write to the public Rekor transparency log when the Docker
-    # repository is public to avoid leaking data.  If you would like to publish
-    # transparency data even for private images, pass --force to cosign below.
-    # https://github.com/sigstore/cosign
-    - name: Sign the published Docker image
-      if: ${{ github.event_name != 'pull_request' }}
-      env:
-        COSIGN_EXPERIMENTAL: "true"
-      # This step uses the identity token to provision an ephemeral certificate
-      # against the sigstore community Fulcio instance.
-      run: cosign sign ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build-and-push.outputs.digest }}
+        tags: jsirianni/opentelemetry-collector-contrib-container-builds:${{ matrix.contrib_version }}-${{ matrix.go_version }}-dev
 
     - name: Run Container with Test Config
       run: |
         docker run \
           --name otel \
           -v ${PWD}/test/config.yaml:/config.yaml \
-          ghcr.io/jsirianni/opentelemetry-collector-contrib-container-builds:${{ matrix.contrib_version }}-${{ matrix.go_version }} --config /config.yaml
+          ghcr.io/jsirianni/opentelemetry-collector-contrib-container-builds:${{ matrix.contrib_version }}-${{ matrix.go_version }}-dev --config /config.yaml
 
     - name: Install Cinc
       run: |
