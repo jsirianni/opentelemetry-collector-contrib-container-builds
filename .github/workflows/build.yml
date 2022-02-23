@@ -72,7 +72,6 @@ jobs:
         platforms: linux/amd64
         #push: true
         push: false
-        build-args:
         tags: 
           firefoxx04/otelcontrib:${{ matrix.contrib_version }}-go${{ matrix.go_version }}
 
