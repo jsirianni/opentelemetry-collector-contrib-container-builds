@@ -130,7 +130,7 @@ jobs:
         docker run \
           --name otel \
           -v ${PWD}/test/config.yaml:/config.yaml \
-          jsirianni/opentelemetry-collector-contrib-container-builds:${{ matrix.contrib_version }}-go${{ matrix.go_version }} --config /config.yaml
+          ghcr.io/jsirianni/opentelemetry-collector-contrib-container-builds:${{ matrix.contrib_version }}-go${{ matrix.go_version }} --config /config.yaml
 
     - name: Install Cinc
       run: |
