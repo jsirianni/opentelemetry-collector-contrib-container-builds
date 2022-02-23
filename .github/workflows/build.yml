@@ -25,12 +25,13 @@ jobs:
       fail-fast: false
       matrix:
         go_version:
+          - latest
           - 1.17
         contrib_version:
-          - "v0.45.1"
-          - "v0.45.0"
-          - "v0.44.0"
-          - "v0.43.0"
+          - "0.45.1"
+          - "0.45.0"
+          - "0.44.0"
+          - "0.43.0"
 
     steps:
     - uses: actions/checkout@v2
@@ -40,7 +41,7 @@ jobs:
       with:
         repository: open-telemetry/opentelemetry-collector-contrib
         path: opentelemetry-collector-contrib
-        ref: ${{ matrix.contrib_version }}
+        ref: "v${{ matrix.contrib_version }}"
 
     # Install the cosign tool except on PR
     # https://github.com/sigstore/cosign-installer
@@ -65,7 +66,7 @@ jobs:
           /home/runner/go/pkg/mod
           /home/runner/.cache/go-build
           /home/runner/go/bin
-        key: v1-go-pkg-mod-${{ runner.os }}-${{ matrix.go_Version }}-${{ matrix.contrib_version }}-${{ hashFiles('**/go.mod', '**/go.sum') }}
+        key: v1-go-pkg-mod-${{ runner.os }}-${{ matrix.go_Version }}-v${{ matrix.contrib_version }}-${{ hashFiles('**/go.mod', '**/go.sum') }}
 
     - name: Go Mod Download
       run: go mod download
@@ -108,9 +109,12 @@ jobs:
         #platforms: linux/amd64,linux/arm64
         platforms: linux/amd64
         push: ${{ github.event_name != 'pull_request' }}
+        # load when  pull request because the image will not be pushed, causing
+        # the run step to fail because the image does not exist.
+        load: ${{ github.event_name == 'pull_request' }}
         labels: ${{ steps.meta.outputs.labels }}
         tags: 
-          jsirianni/opentelemetry-collector-contrib-container-builds:${{ matrix.contrib_version }}-go${{ matrix.go_version }}
+          jsirianni/opentelemetry-collector-contrib-container-builds:${{ matrix.contrib_version }}-${{ matrix.go_version }}
 
     # Sign the resulting Docker image digest except on PRs.
     # This will only write to the public Rekor transparency log when the Docker
@@ -130,7 +134,7 @@ jobs:
         docker run \
           --name otel \
           -v ${PWD}/test/config.yaml:/config.yaml \
-          ghcr.io/jsirianni/opentelemetry-collector-contrib-container-builds:${{ matrix.contrib_version }}-go${{ matrix.go_version }} --config /config.yaml
+          ghcr.io/jsirianni/opentelemetry-collector-contrib-container-builds:${{ matrix.contrib_version }}-${{ matrix.go_version }} --config /config.yaml
 
     - name: Install Cinc
       run: |
