@@ -10,6 +10,6 @@ RUN adduser \
     "$USER"
 
 
-COPY --from=build --chown=otel --chmod=0700 /opentelemetry-collector-contrib/bin/otelcontribcol_linux_amd64 /otelcontribcol
+COPY --chown=otel --chmod=0700 opentelemetry-collector-contrib/bin/otelcontribcol_linux_amd64 /otelcontribcol
 
 ENTRYPOINT [ "/otelcontribcol" ]
