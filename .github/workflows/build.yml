@@ -56,7 +56,6 @@ jobs:
       working-directory: opentelemetry-collector-contrib
 
     - name: Set up Docker Buildx
-      id: buildx
       uses: docker/setup-buildx-action@v1
 
     - name: Set up QEMU
@@ -75,15 +74,17 @@ jobs:
         tags: 
           firefoxx04/otelcontrib:${{ matrix.contrib_version }}-go${{ matrix.go_version }}
 
-      - name: Run Container with Test Config
-        run: |
-          docker run \
-            -v ${PWD}/test/config.yaml:/config.yaml \
-            firefoxx04/otelcontrib:${{ matrix.contrib_version }}-go${{ matrix.go_version }} --config /config.yaml
+    - name: Run Container with Test Config
+      run: |
+        docker run \
+          --name otel \
+          -v ${PWD}/test/config.yaml:/config.yaml \
+          firefoxx04/otelcontrib:${{ matrix.contrib_version }}-go${{ matrix.go_version }} --config /config.yaml
 
-      - name: Install Cinc
-        run: |
-          curl -L https://omnitruck.cinc.sh/install.sh | \
-          sudo bash -s -- -P cinc-auditor -v 4
+    - name: Install Cinc
+      run: |
+        curl -L https://omnitruck.cinc.sh/install.sh | \
+        sudo bash -s -- -P cinc-auditor -v 4
 
-      - name: Run Inspec Tests
+    - name: Run Inspec Tests
+      run: cinc-auditor exec test/cinc.rb -t "docker://otel"
