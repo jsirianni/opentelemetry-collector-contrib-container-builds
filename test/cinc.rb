@@ -1,7 +1,7 @@
 describe user('otel') do
     it { should exist }
     its('uid') { should eq 10001 }
-    its('group') { should eq 'iris' }
+    its('group') { should eq 'otel' }
     its('lastlogin') { should eq nil }
 end
 
