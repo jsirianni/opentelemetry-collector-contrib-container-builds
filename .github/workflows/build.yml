@@ -25,7 +25,6 @@ jobs:
       fail-fast: false
       matrix:
         go_version:
-          - latest
           - 1.17
         contrib_version:
           - "0.45.1"
